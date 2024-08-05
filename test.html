@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fimer</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <input id="peerid" placeholder="My ID"> 
+    <button onclick="join()">Create</button><br>
+
+    <input type="text" id="fpeerid" placeholder="Peer ID"> 
+    <button id="connect" onclick="join()">Join</button><br>
+
+
+    
+    <div id="messages" class="chat-thread"></div>
+
+    <div id="send-container">
+        <input type="text" id="msg" placeholder="Message..">
+        <img src="img/enviar (1).png" onclick="sendMessage()">
+        <!--<button id="send" onclick="sendMessage()">Send</button>-->
+    </div>
+
+    <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+    <script>
+        const messages = document.getElementById("messages");
+        const messageInput = document.getElementById("msg");
+
+        function join() {
+            console.log("Connecting..")
+            //peer = new Peer();
+            var peerIDField = document.querySelector("#peerid")
+            let peerId = peerIDField.value
+            peer = new Peer(peerId, {
+                debug: 2
+            });
+
+            // when connection is created, handle the event - 
+            peer.on('open', function (id) {
+                console.log('Connected to Signaling Server ID : ' + id);
+                // set the input value
+                //var peerIDField = document.querySelector("#peerid")
+                peerIDField.value = id
+                connect()
+            });
+
+            peer.on('connection', function (c) {
+                conn = c
+                console.log("New connection : ")
+                console.log(conn)
+
+                // set the friend peer id we just got
+                var fpeerIDField = document.querySelector("#fpeerid")
+                fpeerIDField.value = c.peer
+
+                // handle message receive
+                conn.on('open', function () {
+                    // Receive messages - receiver side
+                    conn.on('data', function (data) {
+                        console.log('Received', data);
+                        printMsg(data, "friend")
+                    });
+                });
+            });
+        }
+
+        function connect() {
+            var fpeerIDField = document.querySelector("#fpeerid")
+            console.log("connecting to " + fpeerIDField.value)
+            conn = peer.connect(fpeerIDField.value);
+
+            // open event called when connection gets created
+            conn.on('open', function () {
+                console.log("connected")
+                // Receive messages - sender side
+                conn.on('data', function (data) {
+                    console.log('Received', data);
+                    printMsg(data, "friend");
+                    scrollChatToBottom();
+                });
+            });
+        }
+
+        function sendMessage() {
+            var msg = document.querySelector("#msg")
+            console.log("sending message")
+            // send message at sender or receiver side
+            if (conn && conn.open) {
+                printMsg(msg.value, "me");
+                conn.send(msg.value);
+                scrollChatToBottom();
+                clearMessageInput();
+            }
+        }
+
+        function printMsg(msg, sender) {
+            let date = new Date();
+            let dateInNewLine = "style=";
+            dateInNewLine = msg.length > 40 ? dateInNewLine+="''" : dateInNewLine+="display:inline !important";
+            messages.innerHTML = messages.innerHTML + "<div class='message " + sender + "'><div class='message-content'" + dateInNewLine + ">" + msg + "</div><div class='time'>" + formatTime(date.getHours()) + ":" + formatTime(date.getMinutes()) + "</div></div>"
+        }
+
+        function formatTime(time) {
+            if (time < 10) {
+                return 0 + '' + time;
+            }
+
+            return time;
+        }
+
+        function scrollChatToBottom() {
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function clearMessageInput() {
+            messageInput.value = "";
+            messageInput.focus();
+        }
+    </script>
+</body>
+</html>
