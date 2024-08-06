@@ -25,8 +25,12 @@
 
     <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
     <script>
+        const FIVE_MINUTES = 5;
+
         const messages = document.getElementById("messages");
         const messageInput = document.getElementById("msg");
+
+        let deleteMessagesInterval = null;
 
         function join() {
             console.log("Connecting..")
@@ -97,9 +101,15 @@
 
         function printMsg(msg, sender) {
             let date = new Date();
+            let hours = date.getHours();
+            let minutes = date.getMinutes();
+
             let dateInNewLine = "style=";
             dateInNewLine = msg.length > 40 ? dateInNewLine+="''" : dateInNewLine+="display:inline !important";
-            messages.innerHTML = messages.innerHTML + "<div class='message " + sender + "'><div class='message-content'" + dateInNewLine + ">" + msg + "</div><div class='time'>" + formatTime(date.getHours()) + ":" + formatTime(date.getMinutes()) + "</div></div>"
+            
+            messages.innerHTML = messages.innerHTML + "<div data-hours='" + hours + "' data-minutes='" + minutes + "' class='message " + sender + "'><div class='message-content'" + dateInNewLine + ">" + msg + "</div><div class='time'>" + formatTime(date.getHours()) + ":" + formatTime(date.getMinutes()) + "</div></div>"
+            
+            checkClearMessagesInterval();
         }
 
         function formatTime(time) {
@@ -118,6 +128,47 @@
             messageInput.value = "";
             messageInput.focus();
         }
+
+        function checkClearMessagesInterval() {
+            if (deleteMessagesInterval !== null) {
+                return;
+            }
+
+            let date = new Date();
+            let timeout = 60 - date.getSeconds();
+
+            if (timeout === 60) {
+                timeout = 0;
+            }
+            deleteMessagesInterval = undefined;
+            console.log("the timeout is " + timeout + " because it is: " + date)
+            setTimeout(() => {
+                declareDeleteMessagesInterval();
+            }, timeout * 1000);
+        }
+
+        function declareDeleteMessagesInterval() {
+            console.log("after the timeout, i am declareDeleteMessagesInterval")
+            deleteMessagesInterval = setInterval(clearMessages, 60000);
+        }
+
+        function clearMessages() {
+            console.log("clear messages function, should be 1 per minute")
+            allMessages = document.querySelectorAll(".message");
+
+            for (let i = 0; i < allMessages.length; i++) {
+                let now = new Date();
+                let date = new Date();
+                date.setHours(allMessages[i].dataset.hours, allMessages[i].dataset.minutes, 0);
+
+                if (dateDifferenceInMinutes(date, now) > FIVE_MINUTES) {
+                    allMessages[i].remove();
+                }
+
+            }
+        }
+
+        const dateDifferenceInMinutes = (dateInitial, dateFinal) => (dateFinal - dateInitial) / 60_000;
     </script>
 </body>
 </html>
